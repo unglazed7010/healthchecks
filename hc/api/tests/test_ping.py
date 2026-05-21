@@ -387,6 +387,17 @@ class PingTestCase(BaseTestCase):
         assert ping.body_raw
         self.assertEqual(bytes(ping.body_raw), b"Hello \xe9 World")
 
+    def test_it_accepts_bad_unicode_with_filter_http_body(self) -> None:
+        self.check.filter_http_body = True
+        self.check.success_kw = "SUCCESS"
+        self.check.save()
+
+        r = self.client.post(self.url, b"\xe9\xff\xfe", content_type="application/octet-stream")
+        self.assertEqual(r.status_code, 200)
+
+        ping = Ping.objects.get()
+        self.assertEqual(ping.kind, "ign")
+
     @override_settings(S3_BUCKET="test-bucket", PING_BODY_LIMIT=None)
     @patch("hc.api.models.put_object")
     def test_it_uploads_body_to_s3(self, put_object: Mock) -> None:

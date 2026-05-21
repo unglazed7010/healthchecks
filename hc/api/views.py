@@ -216,7 +216,7 @@ def ping(
         action = "ign"
 
     if action != "ign" and check.filter_http_body:
-        body_text = body.decode()
+        body_text = body.decode(errors="replace")
         if check.failure_kw and match_keywords(body_text, check.failure_kw):
             action = "fail"
         elif check.success_kw and match_keywords(body_text, check.success_kw):
