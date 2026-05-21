@@ -398,6 +398,30 @@ class PingTestCase(BaseTestCase):
         ping = Ping.objects.get()
         self.assertEqual(ping.kind, "ign")
 
+    def test_bad_unicode_with_filter_http_body_and_default_fail(self) -> None:
+        self.check.filter_http_body = True
+        self.check.filter_default_fail = True
+        self.check.save()
+
+        r = self.client.post(self.url, b"\xe9\xff\xfe", content_type="application/octet-stream")
+        self.assertEqual(r.status_code, 200)
+
+        ping = Ping.objects.get()
+        self.assertEqual(ping.kind, "fail")
+
+    def test_partial_bad_unicode_still_matches_keywords(self) -> None:
+        # A body with invalid UTF-8 bytes surrounding valid ASCII text should
+        # still match keywords present in the valid portions after replacement.
+        self.check.filter_http_body = True
+        self.check.failure_kw = "FAIL"
+        self.check.save()
+
+        r = self.client.post(self.url, b"\xe9 FAIL \xff", content_type="application/octet-stream")
+        self.assertEqual(r.status_code, 200)
+
+        ping = Ping.objects.get()
+        self.assertEqual(ping.kind, "fail")
+
     @override_settings(S3_BUCKET="test-bucket", PING_BODY_LIMIT=None)
     @patch("hc.api.models.put_object")
     def test_it_uploads_body_to_s3(self, put_object: Mock) -> None:
